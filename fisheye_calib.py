@@ -42,18 +42,16 @@ class App(CameraCalib):
         img_points2, _ = cv2.fisheye.projectPoints(obj_points, rvec, tvec, self.camera_matrix, self.dist_coefs) 
         return img_points2
     def run(self):
-        image_dir = '/home/levin/workspace/calib/opencv-camera-calibration/canon-efs-24mm-crop1.6'
-       
-
+        image_dir = '/home/levin/temp/0601'
         #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
-        self.corners = (9, 6)
+        self.corners = (11, 8)
         #<w>x<h>  Physical sensor size in mm (optional)
         self.sensor_size = (22.3, 14.9)
         #Square size in m
         self.square_size = 0.0244
         #Number of threads to use
-        self.threads = 4
-        file_patter = "*.JPG"
+        self.threads = 10
+        file_patter = "*.jpg"
         self.start_calib(image_dir, file_patter)
         return 
 
