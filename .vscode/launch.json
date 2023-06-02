@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Calibrate",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "-c",
+                "9x6",
+                "-s",
+                "0.0244",
+                "-j",
+                "calib.json",
+                "-S",
+                "22.3x14.9",
+                "-d",
+                "debug",
+                "*.JPG"
+            ],
+            "cwd": "/home/levin/workspace/calib/opencv-camera-calibration/canon-efs-24mm-crop1.6",
+            "justMyCode": true
+        }
+    ]
+}
