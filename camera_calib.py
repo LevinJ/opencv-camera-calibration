@@ -26,6 +26,12 @@ class CameraCalib(object):
     def reproject(self, obj_points, rvec, tvec):
         img_points2, _ = cv2.projectPoints(obj_points, rvec, tvec, self.camera_matrix, self.dist_coefs) 
         return img_points2
+    def undistort(self, img):
+        h, w = self.h, self.w
+        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(self.camera_matrix, self.dist_coefs, (w, h), 1, (w, h))
+
+        dst = cv2.undistort(img, self.camera_matrix, self.dist_coefs, None, newcameramtx)
+        return dst, roi
     def calibrate_reproject(self, obj_points, img_points, w, h, num_chessboards, cb_to_image_index, image_files, j):
         # Calculate camera matrix, distortion, etc
         self.obj_points = obj_points
@@ -231,18 +237,16 @@ class CameraCalib(object):
                     print("Can't find chessboard image!")
                     continue
 
-                h, w = img.shape[:2]
-                newcameramtx, roi = cv2.getOptimalNewCameraMatrix(camera_matrix, dist_coefs, (w, h), 1, (w, h))
-
-                dst = cv2.undistort(img, camera_matrix, dist_coefs, None, newcameramtx)
+                dst, roi = self.undistort(img)
                 
                 # save uncropped
                 cv2.imwrite(outfile1, dst)
 
                 # crop and save the image
-                x, y, w, h = roi
-                dst = dst[y:y+h, x:x+w]            
-                cv2.imwrite(outfile2, dst)
+                if roi is not None:
+                    x, y, w, h = roi
+                    dst = dst[y:y+h, x:x+w]            
+                    cv2.imwrite(outfile2, dst)
                 
                 print(fname)
         return
