@@ -19,6 +19,49 @@ class CameraCalib(object):
         path, fname = os.path.split(fname)
         name, ext = os.path.splitext(fname)
         return path, name, ext
+    def calibrate(self):
+        self.rms, self.camera_matrix, self.dist_coefs, self.rvecs, self.tvecs = \
+            cv2.calibrateCamera(self.obj_points, self.img_points, (self.w, self.h), None, None) #, None, None, None)
+        return
+    def reproject(self, obj_points, rvec, tvec):
+        img_points2, _ = cv2.projectPoints(obj_points, rvec, tvec, self.camera_matrix, self.dist_coefs) 
+        return img_points2
+    def calibrate_reproject(self, obj_points, img_points, w, h, num_chessboards, cb_to_image_index, image_files, j):
+        # Calculate camera matrix, distortion, etc
+        self.obj_points = obj_points
+        self.img_points = img_points
+        self.w, self.h = w, h
+        
+        self.calibrate()
+        print("RMS:", self.rms)
+        print()
+        
+        rms, camera_matrix, dist_coefs, rvecs, tvecs = self.rms, self.camera_matrix, self.dist_coefs, self.rvecs, self.tvecs
+        # Compute reprojection error
+        # After https://docs.opencv2.org/4.5.2/dc/dbb/tutorial_py_calibration.html
+        print('Computing reprojection error:')
+        reprod_error = {}
+        errors = []
+        for cb_index in range(num_chessboards):      
+            img_points2 = self.reproject(obj_points[cb_index], rvecs[cb_index], tvecs[cb_index],)
+            error = cv2.norm(img_points[cb_index], img_points2, cv2.NORM_L2) / len(img_points2)
+            img_index = cb_to_image_index[cb_index]
+            img_file = image_files[img_index]
+            print('[%s] %.6f' % (img_file, error))
+            reprod_error[img_file] = error
+            errors.append(error)
+        reprojection_error_avg = np.average(errors)
+        reprojection_error_stddev = np.std(errors)
+        print("Average reprojection error: %.6f +/- %.6f" % (reprojection_error_avg, reprojection_error_stddev))
+        print()
+        print("Camera matrix:\n", camera_matrix)    
+        print("Distortion coefficients:", dist_coefs.ravel())
+        
+        j['camera_matrix'] = camera_matrix.tolist()
+        j['distortion_coefficients'] = dist_coefs.ravel().tolist()
+        j['rms'] = rms
+        j['reprojection_error'] = {'average': reprojection_error_avg, 'stddev': reprojection_error_stddev, 'image': reprod_error }
+        return camera_matrix,dist_coefs, rvecs,tvecs
     def main(self, image_files, pattern_size, square_size, threads, json_file=None, debug_dir=None, sensor_size=None):
         """    
         image_files: list of image file names
@@ -124,38 +167,8 @@ class CameraCalib(object):
             print('No chessboards to use!')
             sys.exit(-1)
 
-        # Calculate camera matrix, distortion, etc
-        
-        rms, camera_matrix, dist_coefs, rvecs, tvecs = \
-            cv2.calibrateCamera(obj_points, img_points, (w, h), None, None) #, None, None, None)
-
-        print("RMS:", rms)
-        print()
-        
-        # Compute reprojection error
-        # After https://docs.opencv2.org/4.5.2/dc/dbb/tutorial_py_calibration.html
-        print('Computing reprojection error:')
-        reprod_error = {}
-        errors = []
-        for cb_index in range(num_chessboards):
-            img_points2, _ = cv2.projectPoints(obj_points[cb_index], rvecs[cb_index], tvecs[cb_index], camera_matrix, dist_coefs)        
-            error = cv2.norm(img_points[cb_index], img_points2, cv2.NORM_L2) / len(img_points2)
-            img_index = cb_to_image_index[cb_index]
-            img_file = image_files[img_index]
-            print('[%s] %.6f' % (img_file, error))
-            reprod_error[img_file] = error
-            errors.append(error)
-        reprojection_error_avg = np.average(errors)
-        reprojection_error_stddev = np.std(errors)
-        print("Average reprojection error: %.6f +/- %.6f" % (reprojection_error_avg, reprojection_error_stddev))
-        print()
-        print("Camera matrix:\n", camera_matrix)    
-        print("Distortion coefficients:", dist_coefs.ravel())
-        
-        j['camera_matrix'] = camera_matrix.tolist()
-        j['distortion_coefficients'] = dist_coefs.ravel().tolist()
-        j['rms'] = rms
-        j['reprojection_error'] = {'average': reprojection_error_avg, 'stddev': reprojection_error_stddev, 'image': reprod_error }
+        #calibrate and reproject
+        camera_matrix,dist_coefs, rvecs,tvecs = self.calibrate_reproject(obj_points, img_points, w, h, num_chessboards, cb_to_image_index, image_files, j)
         
         if sensor_size is not None:
             
@@ -232,32 +245,39 @@ class CameraCalib(object):
                 cv2.imwrite(outfile2, dst)
                 
                 print(fname)
-
-        # cv2.destroyAllWindows()
-
-    def run(self):
-
-        image_dir = '/home/levin/workspace/calib/opencv-camera-calibration/canon-efs-24mm-crop1.6'
-        image_files = '{}/*.JPG'.format(image_dir)
+        return
+    def start_calib(self, image_dir, file_patter):
+        image_files = '{}/{}'.format(image_dir, file_patter)
         debug_dir = '{}/debug'.format(image_dir)
         json_file = '{}/calib.json'.format(image_dir)
-        
 
 
-        #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
-        corners = (9, 6)
-        #<w>x<h>  Physical sensor size in mm (optional)
-        sensor_size = (22.3, 14.9)
-        #Square size in m
-        square_size = 0.0244
-        #Number of threads to use
-        threads = 4
 
         if debug_dir and not os.path.isdir(debug_dir):
             os.mkdir(debug_dir)
 
         image_files = glob(image_files)       
-        self.main(image_files, corners, square_size, threads, json_file, debug_dir, sensor_size)
+        self.main(image_files, self.corners, self.square_size, self.threads, json_file, debug_dir, self.sensor_size)
+        return
+
+
+    def run(self):
+
+        image_dir = '/home/levin/workspace/calib/opencv-camera-calibration/canon-efs-24mm-crop1.6'
+       
+        
+
+
+        #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
+        self.corners = (9, 6)
+        #<w>x<h>  Physical sensor size in mm (optional)
+        self.sensor_size = (22.3, 14.9)
+        #Square size in m
+        self.square_size = 0.0244
+        #Number of threads to use
+        self.threads = 4
+        file_patter = "*.JPG"
+        self.start_calib(image_dir, file_patter)
         return 
 
 if __name__ == "__main__":   
