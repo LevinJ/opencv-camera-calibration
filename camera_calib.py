@@ -267,7 +267,7 @@ class CameraCalib(object):
 
     def run(self):
 
-        image_dir = '/home/levin/workspace/calib/opencv-camera-calibration/canon-efs-24mm-crop1.6'
+        image_dir = './canon-efs-24mm-crop1.6'
        
         
 
