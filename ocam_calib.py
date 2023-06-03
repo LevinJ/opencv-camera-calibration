@@ -22,19 +22,20 @@ class App(CameraCalib):
         dst = cv2.fisheye.undistortImage(img, self.camera_matrix, self.dist_coefs, None, newcameramtx)
         return dst, roi
     def calibrate(self):
-        obj_points = np.expand_dims(np.asarray(self.obj_points), 1)
+        obj_points = np.expand_dims(np.asarray(self.obj_points), -2).astype(np.float64)
+        img_points = np.asarray(self.img_points).astype(np.float64)
         calibration_flags = 0
         N_OK = len(obj_points)
         K = np.zeros((3, 3))
         D = np.zeros((4, 1))
-        rvecs = [np.zeros((1, 1, 3), dtype=np.float32) for i in range(N_OK)]
-        tvecs = [np.zeros((1, 1, 3), dtype=np.float32) for i in range(N_OK)]
         xi = np.zeros(1)
 
         critia = (cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 200, 0.0001)
+        #probalematic so far, https://github.com/opencv/opencv_contrib/issues/3161
+        #https://github.com/opencv/opencv_contrib/issues/804
         self.rms, self.camera_matrix, self.xi,  self.dist_coefs, self.rvecs, self.tvecs, self.idx = \
-            cv2.omnidir.calibrate(obj_points, self.img_points, (self.w, self.h), K, 
-                                  xi, D, rvecs, tvecs, calibration_flags, critia)
+            cv2.omnidir.calibrate(obj_points, img_points, (self.w, self.h), K, 
+                                  xi, D, calibration_flags, critia)
         return
     def reproject(self, obj_points, rvec, tvec):
         obj_points = np.expand_dims(np.asarray(obj_points), -2)
