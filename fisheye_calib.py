@@ -9,7 +9,7 @@
 from camera_calib import CameraCalib
 import cv2
 import numpy as np
-
+import yaml
 class App(CameraCalib):
     def __init__(self):
         CameraCalib.__init__(self)
@@ -41,7 +41,38 @@ class App(CameraCalib):
         obj_points = np.expand_dims(np.asarray(obj_points), -2)
         img_points2, _ = cv2.fisheye.projectPoints(obj_points, rvec, tvec, self.camera_matrix, self.dist_coefs) 
         return img_points2
+    def save_yaml(self, j, json_file):
+        yaml_file = json_file.replace(".json", ".yaml")
+        y = {}
+        K = j['camera_matrix']
+        y['fx'] = K[0][0]
+        y['cx'] =  K[0][2]
+        y['fy'] =  K[1][1]
+        y['cy'] =  K[1][2]
+        y['skew'] =  0
+
+        y['k1'], y['k2'], y['k3'], y['k4'] = j['distortion_coefficients']
+        y['width'], y['height'] = j['image_resolution']
+
+        with open(yaml_file, 'w') as file:
+            outputs = yaml.dump(y, file)
+        return
     def run(self):
+        self.do_debug = False
+
+        image_dir = './canon-efs-24mm-crop1.6'
+        #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
+        self.corners = (9, 6)
+        #<w>x<h>  Physical sensor size in mm (optional)
+        self.sensor_size = (22.3, 14.9)
+        #Square size in m
+        self.square_size = 0.0244
+        #Number of threads to use
+        self.threads = 8
+        file_patter = "*.JPG"
+        self.start_calib(image_dir, file_patter)
+        return 
+    def run2(self):
         image_dir = '/home/levin/temp/0601'
         #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
         self.corners = (11, 8)

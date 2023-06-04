@@ -14,6 +14,7 @@ import sys
 
 class CameraCalib(object):
     def __init__(self):
+        self.do_debug = True
         return
     def splitfn(self, fname):
         path, fname = os.path.split(fname)
@@ -32,6 +33,8 @@ class CameraCalib(object):
 
         dst = cv2.undistort(img, self.camera_matrix, self.dist_coefs, None, newcameramtx)
         return dst, roi
+    def save_yaml(self, j, json_file):
+        return
     def calibrate_reproject(self, obj_points, img_points, w, h, num_chessboards, cb_to_image_index, image_files, j):
         # Calculate camera matrix, distortion, etc
         self.obj_points = obj_points
@@ -220,6 +223,7 @@ class CameraCalib(object):
                 
         if json_file is not None:
             json.dump(j, open(json_file, 'wt'))
+            self.save_yaml(j, json_file)
 
         # Undistort the image with the calibration
         if debug_dir is not None:
@@ -253,6 +257,8 @@ class CameraCalib(object):
     def start_calib(self, image_dir, file_patter):
         image_files = '{}/{}'.format(image_dir, file_patter)
         debug_dir = '{}/debug'.format(image_dir)
+        if not self.do_debug:
+            debug_dir = None
         json_file = '{}/calib.json'.format(image_dir)
 
 
