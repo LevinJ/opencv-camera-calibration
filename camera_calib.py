@@ -11,6 +11,24 @@ import numpy as np
 import cv2
 from glob import glob
 import sys
+import math
+from math import  atan2
+from math import sin
+from math import cos
+
+def euler_from_matrix(R):
+    R = np.array(R)
+    n = R[:, 0]
+    o = R[:, 1]
+    a =R[:, 2]
+
+    y = atan2(n[1], n[0])
+    p = atan2(-n[2], n[0] * cos(y) + n[1] * sin(y))
+    r = atan2(a[0] * sin(y) - a[1] * cos(y), -o[0] * sin(y) + o[1] * cos(y))
+    ypr = np.array([y, p, r])
+    return ypr
+def R2ypr(R):
+    return euler_from_matrix(R)/math.pi * 180
 
 class CameraCalib(object):
     def __init__(self):
@@ -56,6 +74,7 @@ class CameraCalib(object):
             error = cv2.norm(img_points[cb_index], img_points2, cv2.NORM_L2) / len(img_points2)
             img_index = cb_to_image_index[cb_index]
             img_file = image_files[img_index]
+            img_file = os.path.basename(img_file)
             print('[%s] %.6f' % (img_file, error))
             reprod_error[img_file] = error
             errors.append(error)
@@ -202,11 +221,15 @@ class CameraCalib(object):
             img_index = cb_to_image_index[cb_index]
             r = rvecs[cb_index]
             t = tvecs[cb_index]
-            print('[%s] rotation (%.6f, %.6f, %.6f), translation (%.6f, %.6f, %.6f)' % \
-                (image_files[img_index], r[0][0], r[1][0], r[2][0], t[0][0], t[1][0], t[2][0]))
-                
+
+            image_name = os.path.basename(image_files[img_index])
             rotation_matrix, _ = cv2.Rodrigues(r)
-            chessboard_orientations[image_files[img_index]] = {
+            ypr = R2ypr(rotation_matrix)
+            print('[%s] rotation (%.6f, %.6f, %.6f), translation (%.6f, %.6f, %.6f)' % \
+                (image_name, ypr[0], ypr[1], ypr[2], t[0][0], t[1][0], t[2][0]))
+                
+            
+            chessboard_orientations[image_name] = {
                 #'rotation_vector': (r[0][0], r[1][0], r[2][0]),
                 'rotation_matrix': rotation_matrix.tolist(),
                 'translation': (t[0][0], t[1][0], t[2][0])
@@ -285,7 +308,7 @@ class CameraCalib(object):
         #Square size in m
         self.square_size = 0.0244
         #Number of threads to use
-        self.threads = 4
+        self.threads = 8
         file_patter = "*.JPG"
         self.start_calib(image_dir, file_patter)
         return 
