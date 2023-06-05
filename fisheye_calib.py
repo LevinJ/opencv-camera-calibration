@@ -57,7 +57,7 @@ class App(CameraCalib):
         with open(yaml_file, 'w') as file:
             outputs = yaml.dump(y, file)
         return
-    def run(self):
+    def run2(self):
         self.do_debug = False
 
         image_dir = './canon-efs-24mm-crop1.6'
@@ -72,7 +72,8 @@ class App(CameraCalib):
         file_patter = "*.JPG"
         self.start_calib(image_dir, file_patter)
         return 
-    def run2(self):
+    def run(self):
+        self.do_debug = True
         image_dir = '/home/levin/temp/0601'
         #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
         self.corners = (11, 8)
