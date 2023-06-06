@@ -277,7 +277,7 @@ class CameraCalib(object):
                 
                 print(fname)
         return
-    def start_calib(self, image_dir, file_patter):
+    def start_calib(self, image_dir, file_patter, batch_nums=None):
         image_files = '{}/{}'.format(image_dir, file_patter)
         debug_dir = '{}/debug'.format(image_dir)
         if not self.do_debug:
@@ -289,7 +289,14 @@ class CameraCalib(object):
         if debug_dir and not os.path.isdir(debug_dir):
             os.mkdir(debug_dir)
 
-        image_files = glob(image_files)       
+        if batch_nums is None:
+            image_files = glob(image_files)    
+        else:
+            res = []
+            for batch_num in  batch_nums:
+                images =   glob('{}/{}/{}'.format(image_dir, batch_num, file_patter) )
+                res.extend(images)
+            image_files = res
         self.main(image_files, self.corners, self.square_size, self.threads, json_file, debug_dir, self.sensor_size)
         return
 
