@@ -150,7 +150,7 @@ class CameraCalib(object):
                     radius = 20    
                     color = (255, 0, 0)
                     thickness = -1
-                    vis = cv2.circle(vis, center_coordinates, radius, color, thickness)           
+                    vis = cv2.circle(vis, tuple(center_coordinates), radius, color, thickness)           
                 _, name, _ = self.splitfn(fname)
                 outfile = os.path.join(debug_dir, name + '_chessboard.png')
                 cv2.imwrite(outfile, vis)

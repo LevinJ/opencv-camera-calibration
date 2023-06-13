@@ -10,6 +10,7 @@ from camera_calib import CameraCalib
 import cv2
 import numpy as np
 import yaml
+import os
 class App(CameraCalib):
     def __init__(self):
         CameraCalib.__init__(self)
@@ -89,8 +90,9 @@ class App(CameraCalib):
         return 
     def run(self):
         self.do_debug = True
-        image_dir = '/home/levin/temp/0612'
-        batch_nums = [1, 2, 3]
+        home_directory = os.path.expanduser( '~' )
+        image_dir = '{}/temp/0612'.format(home_directory)
+        batch_nums = [1, 2, 3, 4]
         #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
         self.corners = (9, 9)
         #<w>x<h>  Physical sensor size in mm (optional)
