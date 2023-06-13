@@ -144,7 +144,13 @@ class CameraCalib(object):
             if debug_dir:
                 # Write image with detected chessboard overlay
                 vis = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-                cv2.drawChessboardCorners(vis, pattern_size, corners, found)            
+                cv2.drawChessboardCorners(vis, pattern_size, corners, found) 
+                if found:
+                    center_coordinates = corners[0][0].astype(np.int32).tolist()    
+                    radius = 20    
+                    color = (255, 0, 0)
+                    thickness = -1
+                    vis = cv2.circle(vis, center_coordinates, radius, color, thickness)           
                 _, name, _ = self.splitfn(fname)
                 outfile = os.path.join(debug_dir, name + '_chessboard.png')
                 cv2.imwrite(outfile, vis)
@@ -224,8 +230,9 @@ class CameraCalib(object):
 
             image_name = os.path.basename(image_files[img_index])
             rotation_matrix, _ = cv2.Rodrigues(r)
-            ypr = R2ypr(rotation_matrix)
-            print('[%s] rotation (%.6f, %.6f, %.6f), translation (%.6f, %.6f, %.6f)' % \
+            ypr = R2ypr(rotation_matrix.transpose())
+            # ypr = R2ypr(rotation_matrix)
+            print('[%s] rotation Rbc= (%.6f, %.6f, %.6f), translation tcb (%.6f, %.6f, %.6f)' % \
                 (image_name, ypr[0], ypr[1], ypr[2], t[0][0], t[1][0], t[2][0]))
                 
             
@@ -297,6 +304,7 @@ class CameraCalib(object):
                 images =   glob('{}/{}/{}'.format(image_dir, batch_num, file_patter) )
                 res.extend(images)
             image_files = res
+        image_files.sort()
         self.main(image_files, self.corners, self.square_size, self.threads, json_file, debug_dir, self.sensor_size)
         return
 

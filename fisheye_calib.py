@@ -57,7 +57,7 @@ class App(CameraCalib):
         with open(yaml_file, 'w') as file:
             outputs = yaml.dump(y, file)
         return
-    def run2(self):
+    def run1(self):
         self.do_debug = False
 
         image_dir = './canon-efs-24mm-crop1.6'
@@ -72,8 +72,8 @@ class App(CameraCalib):
         file_patter = "*.JPG"
         self.start_calib(image_dir, file_patter)
         return 
-    def run(self):
-        self.do_debug = False
+    def run2(self):
+        self.do_debug = True
         image_dir = '/home/levin/temp/0601'
         batch_nums = [1, 2, 5, 6, 7]
         #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
@@ -87,6 +87,21 @@ class App(CameraCalib):
         file_patter = "*.jpg"
         self.start_calib(image_dir, file_patter, batch_nums=batch_nums)
         return 
+    def run(self):
+        self.do_debug = True
+        image_dir = '/home/levin/temp/0612'
+        batch_nums = [1, 2, 3]
+        #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
+        self.corners = (9, 9)
+        #<w>x<h>  Physical sensor size in mm (optional)
+        self.sensor_size = (22.3, 14.9)
+        #Square size in m
+        self.square_size = 0.1
+        #Number of threads to use
+        self.threads = 10
+        file_patter = "*.jpg"
+        self.start_calib(image_dir, file_patter, batch_nums=batch_nums)
+        return
 
 if __name__ == "__main__":   
     obj= App()
