@@ -92,7 +92,7 @@ class App(CameraCalib):
         self.do_debug = True
         home_directory = os.path.expanduser( '~' )
         image_dir = '{}/temp/0612'.format(home_directory)
-        batch_nums = [1, 2, 3, 4]
+        batch_nums = [1]
         #<w>x<h>              Number of *inner* corners of the chessboard pattern (default: 9x6)
         self.corners = (9, 9)
         #<w>x<h>  Physical sensor size in mm (optional)

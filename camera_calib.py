@@ -15,6 +15,8 @@ import math
 from math import  atan2
 from math import sin
 from math import cos
+from poseinfo import PoseInfo
+import pandas as pd
 
 def euler_from_matrix(R):
     R = np.array(R)
@@ -33,6 +35,7 @@ def R2ypr(R):
 class CameraCalib(object):
     def __init__(self):
         self.do_debug = True
+        self.ray_angles = {}
         return
     def splitfn(self, fname):
         path, fname = os.path.split(fname)
@@ -90,6 +93,39 @@ class CameraCalib(object):
         j['rms'] = rms
         j['reprojection_error'] = {'average': reprojection_error_avg, 'stddev': reprojection_error_stddev, 'image': reprod_error }
         return camera_matrix,dist_coefs, rvecs,tvecs
+    def cal_ray_angle(self, image_name, Rcb, tcb, Pbs):
+        Pbs = np.concatenate([Pbs, np.ones((len(Pbs), 1))], axis = 1)
+        Tcb = PoseInfo().construct_fromRt(Rcb, tcb)
+        pcs = Pbs.dot(Tcb.T.T)
+        pcs = np.array(pcs) 
+        pcs_hw = pcs.shape[:2]
+        xs = pcs[:, 0]
+        ys = pcs[:, 1]
+        zs = pcs[:, 2]
+
+        rs2 = xs * xs + ys * ys 
+        rs = np.sqrt(rs2)
+
+        thetas = np.arctan2(rs, zs) * 180/math.pi
+        phis = np.arctan2(ys, xs)* 180/math.pi
+
+        for k in ['image_names', 'thetas', 'phis']:
+            if not k in self.ray_angles:
+                self.ray_angles[k] = []
+        self.ray_angles['image_names'].extend([image_name] * len(thetas))
+        self.ray_angles['thetas'].extend(thetas)
+        self.ray_angles['phis'].extend(phis)
+        return
+    def disp_ray_angles(self):
+        df = pd.DataFrame(self.ray_angles)
+        df.to_csv('./temp/test.cvs')
+        print(df.describe())
+
+        gkk = df.groupby('image_names')
+        for image_name, gk in gkk:
+            print('{}:'.format(image_name))
+            print(gk.describe())
+        return
     def main(self, image_files, pattern_size, square_size, threads, json_file=None, debug_dir=None, sensor_size=None):
         """    
         image_files: list of image file names
@@ -234,6 +270,14 @@ class CameraCalib(object):
             # ypr = R2ypr(rotation_matrix)
             print('[%s] rotation Rbc= (%.6f, %.6f, %.6f), translation tcb (%.6f, %.6f, %.6f)' % \
                 (image_name, ypr[0], ypr[1], ypr[2], t[0][0], t[1][0], t[2][0]))
+            
+            #calculate camera ray angle (theta and phi)
+            Rcb = rotation_matrix
+            tcb = np.array([t[0][0], t[1][0], t[2][0]]) 
+            Pbs = obj_points[cb_index]
+            self.cal_ray_angle(image_files[img_index], Rcb, tcb, Pbs)
+
+
                 
             
             chessboard_orientations[image_name] = {
@@ -254,35 +298,36 @@ class CameraCalib(object):
         if json_file is not None:
             json.dump(j, open(json_file, 'wt'))
             self.save_yaml(j, json_file)
+            print("save calibration file {}".format(json_file))
 
         # Undistort the image with the calibration
-        if debug_dir is not None:
-            print('')
-            print('Writing undistorted images to %s directory:' % debug_dir)
+        # if debug_dir is not None:
+        #     print('')
+        #     print('Writing undistorted images to %s directory:' % debug_dir)
             
-            for fname in image_files:
-                _, name, _ = self.splitfn(fname)
-                img_found = os.path.join(debug_dir, name + '_chessboard.png')
-                outfile1 = os.path.join(debug_dir, name + '_undistorted.png')
-                outfile2 = os.path.join(debug_dir, name + '_undistorted_cropped.png')
+        #     for fname in image_files:
+        #         _, name, _ = self.splitfn(fname)
+        #         img_found = os.path.join(debug_dir, name + '_chessboard.png')
+        #         outfile1 = os.path.join(debug_dir, name + '_undistorted.png')
+        #         outfile2 = os.path.join(debug_dir, name + '_undistorted_cropped.png')
 
-                img = cv2.imread(img_found)
-                if img is None:
-                    print("Can't find chessboard image!")
-                    continue
+        #         img = cv2.imread(img_found)
+        #         if img is None:
+        #             print("Can't find chessboard image!")
+        #             continue
 
-                dst, roi = self.undistort(img)
+        #         dst, roi = self.undistort(img)
                 
-                # save uncropped
-                cv2.imwrite(outfile1, dst)
+        #         # save uncropped
+        #         cv2.imwrite(outfile1, dst)
 
-                # crop and save the image
-                if roi is not None:
-                    x, y, w, h = roi
-                    dst = dst[y:y+h, x:x+w]            
-                    cv2.imwrite(outfile2, dst)
+        #         # crop and save the image
+        #         if roi is not None:
+        #             x, y, w, h = roi
+        #             dst = dst[y:y+h, x:x+w]            
+        #             cv2.imwrite(outfile2, dst)
                 
-                print(fname)
+        #         print(fname)
         return
     def start_calib(self, image_dir, file_patter, batch_nums=None):
         image_files = '{}/{}'.format(image_dir, file_patter)
@@ -306,6 +351,8 @@ class CameraCalib(object):
             image_files = res
         image_files.sort()
         self.main(image_files, self.corners, self.square_size, self.threads, json_file, debug_dir, self.sensor_size)
+
+        # self.disp_ray_angles()
         return
 
 
